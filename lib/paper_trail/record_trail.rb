@@ -175,9 +175,16 @@ module PaperTrail
       if record_object_changes? && changed_notably?
         data[:object_changes] = recordable_object_changes
       end
+
       add_transaction_id_to(data)
       versions_assoc = @record.send(@record.class.versions_association_name)
-      version = versions_assoc.create! merge_metadata(data)
+      version = send(self.class.versions_association_name).new
+      begin
+        version.assign_attributes merge_metadata(data)
+        version.save
+      rescue Exception => e
+        puts e.to_s
+      end
       update_transaction_id(version)
       save_associations(version)
     end
@@ -192,7 +199,13 @@ module PaperTrail
           whodunnit: PaperTrail.whodunnit
         }
         add_transaction_id_to(data)
-        version = @record.class.paper_trail.version_class.create(merge_metadata(data))
+        version = send(self.class.versions_association_name).new
+          begin
+            version.assign_attributes merge_metadata(data)
+            version.save
+          rescue Exception => e
+            puts e.to_s
+          end 
         if version.errors.any?
           log_version_errors(version, :destroy)
         else
@@ -225,9 +238,16 @@ module PaperTrail
         if record_object_changes?
           data[:object_changes] = recordable_object_changes
         end
+
         add_transaction_id_to(data)
         versions_assoc = @record.send(@record.class.versions_association_name)
-        version = versions_assoc.create(merge_metadata(data))
+        version = send(self.class.versions_association_name).new
+        begin
+          version = versions_assoc.create(merge_metadata(data))
+          version.save
+         rescue Exception => e
+            puts e.to_s
+          end  
         if version.errors.any?
           log_version_errors(version, :update)
         else
